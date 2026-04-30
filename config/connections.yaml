@@ -1,0 +1,23 @@
+minio:
+  conn_type: aws
+  login: minioadmin
+  password: minioadmin
+  extra:
+    endpoint_url: "http://minio:9000"
+    region_name: "us-east-1"
+
+clickhouse:
+  conn_type: clickhouse
+  host: clickhouse
+  port: 8123
+  login: clickhouse
+  password: clickhouse
+  schema: dwh
+
+citibike:
+  conn_type: aws
+  login: none
+  password: none
+  extra:
+    endpoint_url: "https://storage.yandexcloud.net"
+    region_name: "ru-central1"
