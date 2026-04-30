@@ -308,8 +308,8 @@ services:
     restart: on-failure
     entrypoint: >
       /bin/sh -c "
-      /usr/bin/mc alias set dockerminio http://minio:9000 changemeuser changemepass;
-      /usr/bin/mc mb dockerminio/yourbucketname;
+      /usr/bin/mc alias set dockerminio http://minio:9000 minioadmin minioadmin;
+      /usr/bin/mc mb dockerminio/stg;
       exit 0;
       "
       
