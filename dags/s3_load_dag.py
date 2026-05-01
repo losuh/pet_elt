@@ -13,7 +13,7 @@ from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 from airflow.exceptions import AirflowSkipException
 from airflow.sensors.external_task import ExternalTaskMarker
 
-SHARED_BASE_DIR = "/opt/airflow/shared_workers_data"
+SHARED_BASE_DIR = "/opt/airflow"
 
 BUCKET_NAME_SOURCE = "citibike-data"
 BUCKET_NAME_TARGET = "bucket"
@@ -118,7 +118,7 @@ def load(extract_dir, list_keys, exec_date):
             logging.info(f"Файл успешно загружен: {file} -> {key}")
             #print(f"Файл успешно загружен: {file} -> {key}")
 
-@task(trigger_rule="all_done")
+@task(trigger_rule="none_skipped")
 def cleanup(data, dir_path):
 
     zip_path = data["downloaded_path"]
@@ -137,17 +137,12 @@ def cleanup(data, dir_path):
             #print(f"Удалён {path}")
 
 default_args = {
-    'group': 'g4',
-	'owner': 'Daniil Konovalov',
     'retries': 3,
     'catchup' : True,
 }
 
 @dag(
-    dag_id='g4_konovalov_daniil_s1_dag',
-    description='my first dag for s1',
-    tags=["group:g4", "owner:konovalov.daniil", "stage:s1"],
-    doc_md="some doc information bla bla bla",
+    dag_id='st1_load_to_s3_dag',
     schedule="0 0 L * *",
     start_date=pendulum.datetime(2024, 12, 16, tz="Europe/Moscow"),
     max_active_runs=1,
@@ -168,9 +163,9 @@ def s3_dag():
     )
 
     marker = ExternalTaskMarker(
-        task_id='mark_s2_dependency',
+        task_id='mark_st2_dependency',
         external_dag_id = 'g4_konovalov_daniil_s2_wap_dag',
-        external_task_id = 'wait_for_s1',
+        external_task_id = 'wait_for_st1',
     )
 
     exec_date = get_date()
