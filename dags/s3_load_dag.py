@@ -7,7 +7,6 @@ import re
 
 from airflow.decorators import dag, task
 from airflow.operators.python import get_current_context
-from airflow.operators.python import PythonOperator
 from airflow.providers.amazon.aws.operators.s3 import S3ListOperator
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 from airflow.exceptions import AirflowSkipException
@@ -164,7 +163,7 @@ def s3_dag():
 
     marker = ExternalTaskMarker(
         task_id='mark_st2_dependency',
-        external_dag_id = 'g4_konovalov_daniil_s2_wap_dag',
+        external_dag_id = 'st2_load_to_clickhouse_dag',
         external_task_id = 'wait_for_st1',
     )
 
