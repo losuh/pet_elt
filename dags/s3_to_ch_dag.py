@@ -12,60 +12,22 @@ from airflow.providers.amazon.aws.operators.s3 import S3ListOperator
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 from airflow.exceptions import AirflowSkipException
 from airflow.sensors.external_task import ExternalTaskMarker, ExternalTaskSensor
-from airflow.providers.clickhouse.operators.clickhouse import ClickHouseOperator
+# Вместо airflow.providers.clickhouse...
+from airflow_clickhouse_plugin.operators.clickhouse import ClickHouseOperator
 
-default_args = {
-    'start_date': datetime(2024, 12, 1),
-    'retries': 1,
-}
-
-with DAG(
-        's3_to_clickhouse_trips',
-        default_args=default_args,
-        schedule_interval='@monthly',  # или по завершении первого DAG
-        catchup=False
-) as dag:
-    # Определяем переменные для пути (например, для декабря 2024)
-    # В реальном DAG используйте {{ ds_format(ds, '%Y-%m-%d', '%Y%m') }}
-    s3_path = "s3://your-bucket/202412/*.csv"
-
-    # 1. Создаем таблицу (если нет)
-    create_table = ClickHouseOperator(
-        task_id='create_table',
-        sql="""
-        CREATE TABLE IF NOT EXISTS trips (
-            ride_id String,
-            rideable_type String,
-            started_at DateTime,
-            ended_at DateTime,
-            -- добавьте остальные поля согласно структуре CSV
-        ) ENGINE = MergeTree()
-        PARTITION BY toYYYYMM(started_at)
-        ORDER BY started_at;
-        """
-    )
-
-    # 2. Загружаем данные напрямую из S3
-    # Используем функцию s3(), где указываем путь, формат и структуру
-    load_from_s3 = ClickHouseOperator(
-        task_id='load_from_s3',
-        sql=f"""
-        INSERT INTO trips
-        SELECT * FROM s3(
-            '{s3_path}',
-            'AWS_ACCESS_KEY_ID', 
-            'AWS_SECRET_ACCESS_KEY', 
-            'CSVWithNames'
-        )
-        """
-    )
-
-    create_table >> load_from_s3
+@task
+def get_path():
+    context = get_current_context()
+    exec_date = context["ds_nodash"][:6]
+    path = f"http://minio:9000/{BUCKET_NAME_SOURCE}/raw/citibike_data/{exec_date}/*.csv"
+    return path
 
 
-BUCKET_NAME_TARGET = "bucket"
+BUCKET_NAME_SOURCE = "bucket"
 
-AWS_CONN_ID_TARGET = "MINIO"
+AWS_CONN_ID_SOURCE = "MINIO"
+
+CH_CONN_ID = "CLICKHOUSE"
 
 CSV_RE = re.compile(r"\d{6}-citibike-tripdata(_\d+)?\.csv$")
 
@@ -89,18 +51,63 @@ def s3_dag():
         external_task_id='mark_st2_dependency',
     )
 
-    list_keys_source = S3ListOperator(
-        task_id="list_keys_target",
-        bucket=BUCKET_NAME_TARGET,
-        aws_conn_id=AWS_CONN_ID_TARGET,
+    #list_keys_source = S3ListOperator(
+    #    task_id="list_keys_source",
+    #    bucket=BUCKET_NAME_SOURCE,
+    #    aws_conn_id=AWS_CONN_ID_SOURCE,
+    #)
+
+
+
+    create_table = ClickHouseOperator(
+        clickhouse_conn_id = CH_CONN_ID,
+        task_id='create_table',
+        sql="""
+            CREATE TABLE IF NOT EXISTS trips (
+                ride_id String,
+                rideable_type String,
+                started_at DateTime64(3),
+                ended_at DateTime64(3),
+                start_station_name String,
+                start_station_id String,
+                end_station_name String,
+                end_station_id String,
+                start_lat Float64,
+                start_lng Float64,
+                end_lat Float64,
+                end_lng Float64,
+                member_casual String
+            ) ENGINE = MergeTree()
+            ORDER BY started_at;
+            """
     )
+    s3_path = get_path()
+
+    # 2. Загружаем данные напрямую из S3
+    # Используем функцию s3(), где указываем путь, формат и структуру
+    load_from_s3 = ClickHouseOperator(
+        task_id='load_from_s3',
+        clickhouse_conn_id=CH_CONN_ID,
+        sql="""
+            INSERT INTO trips
+            SELECT * FROM s3(
+                '{{ task_instance.xcom_pull(task_ids="get_path") }}',
+                '{{ conn.MINIO.login }}', 
+                '{{ conn.MINIO.password }}', 
+                'CSVWithNames'
+            )
+        """,
+        params={'path': s3_path}
+    )
+    sensor >> create_table >> load_from_s3
 
 
 
-    exec_date = get_date()
-    data = extract(list_keys_source.output, exec_date)
-    extract_root = unzip(data)
-    load_task = load(extract_root, list_keys_target.output, exec_date)
-    load_task >> cleanup(data, extract_root) >> marker
+
+    #exec_date = get_date()
+    #data = extract(list_keys_source.output, exec_date)
+    #extract_root = unzip(data)
+    #load_task = load(extract_root, list_keys_target.output, exec_date)
+    #load_task >> cleanup(data, extract_root) >> marker
 
 s3_dag()
