@@ -1,8 +1,4 @@
-import shutil
-import logging
 import pendulum
-import os
-import zipfile
 import re
 
 from airflow.decorators import dag, task
@@ -10,9 +6,7 @@ from airflow.operators.python import get_current_context
 from airflow.operators.python import PythonOperator
 from airflow.providers.amazon.aws.operators.s3 import S3ListOperator
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
-from airflow.exceptions import AirflowSkipException
 from airflow.sensors.external_task import ExternalTaskMarker, ExternalTaskSensor
-# Вместо airflow.providers.clickhouse...
 from airflow_clickhouse_plugin.operators.clickhouse import ClickHouseOperator
 
 @task
@@ -51,14 +45,6 @@ def s3_dag():
         external_task_id='mark_st2_dependency',
     )
 
-    #list_keys_source = S3ListOperator(
-    #    task_id="list_keys_source",
-    #    bucket=BUCKET_NAME_SOURCE,
-    #    aws_conn_id=AWS_CONN_ID_SOURCE,
-    #)
-
-
-
     create_table = ClickHouseOperator(
         clickhouse_conn_id = CH_CONN_ID,
         task_id='create_table',
@@ -83,8 +69,6 @@ def s3_dag():
     )
     s3_path = get_path()
 
-    # 2. Загружаем данные напрямую из S3
-    # Используем функцию s3(), где указываем путь, формат и структуру
     load_from_s3 = ClickHouseOperator(
         task_id='load_from_s3',
         clickhouse_conn_id=CH_CONN_ID,
@@ -100,14 +84,5 @@ def s3_dag():
         params={'path': s3_path}
     )
     sensor >> create_table >> load_from_s3
-
-
-
-
-    #exec_date = get_date()
-    #data = extract(list_keys_source.output, exec_date)
-    #extract_root = unzip(data)
-    #load_task = load(extract_root, list_keys_target.output, exec_date)
-    #load_task >> cleanup(data, extract_root) >> marker
 
 s3_dag()
