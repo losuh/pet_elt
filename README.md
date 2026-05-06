@@ -1,10 +1,10 @@
 # Проект ELT: Citibike Data Pipeline
 
-## 📋 Описание
+##  Описание
 
 Проект автоматизирует загрузку данных о поездках Citibike из Yandex Cloud Storage в MinIO, с последующей обработкой в ClickHouse.
 
-## 🏗️ Архитектура
+##  Архитектура
 
 ```
 Yandex Cloud Storage (S3) 
@@ -16,7 +16,7 @@ Yandex Cloud Storage (S3)
    ClickHouse (Transform)
 ```
 
-## 🚀 Быстрый старт
+##  Быстрый старт
 
 ### Требования
 - Docker & Docker Compose
@@ -26,7 +26,7 @@ Yandex Cloud Storage (S3)
 
 ```bash
 # Клонировать репозиторий
-git clone <repository>
+git clone [<repository>](https://github.com/losuh/pet_elt)
 cd pet_elt
 
 # Запустить контейнеры
@@ -37,7 +37,7 @@ docker-compose up -d
 # Логин: airflow / Пароль: airflow
 ```
 
-## 📁 Структура проекта
+##  Структура проекта
 
 ```
 pet_elt/
@@ -49,7 +49,7 @@ pet_elt/
 └── README.md
 ```
 
-## 🔗 Подключения Airflow
+##  Подключения Airflow
 
 | Название | Тип | Назначение |
 |----------|-----|-----------|
@@ -57,7 +57,7 @@ pet_elt/
 | `minio` | AWS S3 | Локальное s3 хранилище |
 | `clickhouse` | ClickHouse | Локальный dwh |
 
-## ⚙️ Сервисы
+##  Сервисы
 
 - **Airflow**: Оркестрация DAG-ов
 - **PostgreSQL**: Метаданные Airflow
@@ -65,7 +65,7 @@ pet_elt/
 - **MinIO**: S3-совместимое хранилище
 - **ClickHouse**: Аналитическое хранилище данных
 
-## 📊 DAG-ы
+##  DAG-ы
 
 ### `st1_load_to_s3_dag`
 Загрузка ZIP-файлов с данными из Yandex Cloud в MinIO
@@ -73,6 +73,6 @@ pet_elt/
 ### `st2_load_to_clickhouse_dag`
 Загрузка и трансформация данных в ClickHouse
 
-## 📝 Логирование
+##  Логирование
 
 Логи доступны в директории `/logs` и через UI Airflow.
