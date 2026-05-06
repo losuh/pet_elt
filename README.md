@@ -26,7 +26,7 @@ Yandex Cloud Storage (S3)
 
 ```bash
 # Клонировать репозиторий
-git clone [<repository>](https://github.com/losuh/pet_elt)
+git clone https://github.com/losuh/pet_elt
 cd pet_elt
 
 # Запустить контейнеры
